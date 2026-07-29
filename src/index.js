@@ -30,6 +30,9 @@ import createUser from "./repository/user.repository/userCreate.repository.js";
 import updateUser from "./repository/user.repository/userUpdate.repository.js";
 import deleteUser from "./repository/user.repository/userDelete.repository.js";
 import MUser from "./db/User.js";
+import MVeiculo from "./db/Veiculo.js";
+import MMaintenance from "./db/Maintenance.js";
+import MWorkshop from "./db/Workshop.js";
 
 import createAdmin from "./repository/admin.repository/adminCreate.repository.js";
 import deleteAdmin from "./repository/admin.repository/adminDelete.reposirory.js";
@@ -49,6 +52,12 @@ app.use(cors({
      allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+
+async function getMyWorkshopId(adminId) {
+     const workshop = await MWorkshop.findOne({ admin: adminId });
+     if (!workshop) throw new Error("Você ainda não possui uma oficina cadastrada");
+     return workshop._id;
+}
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.post("/login", async (req, res) => {
@@ -169,7 +178,8 @@ app.delete("/workshop/:id", authMiddleware, requireRole("admin"), async (req, re
 //! Veiculo
 app.post("/veiculo", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
-          const newVeiculo = await createVeiculo(req.body);
+          const workshopId = await getMyWorkshopId(req.user.id);
+          const newVeiculo = await createVeiculo({ ...req.body, workshop: workshopId });
           res.json(newVeiculo);
      } catch (error) {
           res.json({ error: error.message });
@@ -178,6 +188,13 @@ app.post("/veiculo", authMiddleware, requireRole("admin"), async (req, res) => {
 
 app.put("/veiculo/:id", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
+          const veiculo = await MVeiculo.findById(req.params.id);
+          if (!veiculo) return res.status(404).json({ error: "Veículo não encontrado" });
+
+          const workshopId = await getMyWorkshopId(req.user.id);
+          if (veiculo.workshop.toString() !== workshopId.toString()) {
+               return res.status(403).json({ error: "Você não tem permissão para editar este veículo" });
+          }
           const putVeiculo = await updateVeiculo(req.params.id, req.body, { new: true });
           res.json(putVeiculo);
      } catch (error) {
@@ -187,6 +204,13 @@ app.put("/veiculo/:id", authMiddleware, requireRole("admin"), async (req, res) =
 
 app.delete("/veiculo/:id", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
+          const veiculo = await MVeiculo.findById(req.params.id);
+          if (!veiculo) return res.status(404).json({ error: "Veículo não encontrado" });
+
+          const workshopId = await getMyWorkshopId(req.user.id);
+          if (veiculo.workshop.toString() !== workshopId.toString()) {
+               return res.status(403).json({ error: "Você não tem permissão para excluir este veículo" });
+          }
           const delVeiculo = await deleteVeiculo(req.params.id);
           res.json(delVeiculo);
      } catch (error) {
@@ -194,19 +218,21 @@ app.delete("/veiculo/:id", authMiddleware, requireRole("admin"), async (req, res
      }
 });
 
-app.get("/veiculo", async (req, res) => {
+app.get("/veiculo/mine", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
-          const listarVeiculos = await readVeiculo(req.body);
-          res.json(listarVeiculos);
+          const workshopId = await getMyWorkshopId(req.user.id);
+          const meusVeiculos = await MVeiculo.find({ workshop: workshopId });
+          res.json(meusVeiculos);
      } catch (error) {
-          res.json({ error: error.message });
+          res.status(400).json({ error: error.message });
      }
 });
 
 //! Maintenance
 app.post("/maintenance", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
-          const newMaintenance = await createMaintenance(req.body);
+          const workshopId = await getMyWorkshopId(req.user.id);
+          const newMaintenance = await createMaintenance({ ...req.body, workshop: workshopId });
           res.json(newMaintenance);
      } catch (error) {
           res.json({ error: error.message });
@@ -215,6 +241,15 @@ app.post("/maintenance", authMiddleware, requireRole("admin"), async (req, res) 
 
 app.put("/maintenance/:id", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
+
+          const maintenance = await MMaintenance.findById(req.params.id);
+          if (!maintenance) return res.status(404).json({ error: "Manutenção não encontrada" });
+
+          const workshopId = await getMyWorkshopId(req.user.id);
+          if (maintenance.workshop.toString() !== workshopId.toString()) {
+               return res.status(403).json({ error: "Você não tem permissão para editar esta manutenção" });
+          }
+
           const putMaintenance = await updateMaintenance(req.params.id, req.body, { new: true });
           res.json(putMaintenance);
      } catch (error) {
@@ -224,6 +259,14 @@ app.put("/maintenance/:id", authMiddleware, requireRole("admin"), async (req, re
 
 app.delete("/maintenance/:id", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
+          const maintenance = await MMaintenance.findById(req.params.id);
+          if (!maintenance) return res.status(404).json({ error: "Manutenção não encontrada" });
+
+          const workshopId = await getMyWorkshopId(req.user.id);
+          if (maintenance.workshop.toString() !== workshopId.toString()) {
+               return res.status(403).json({ error: "Você não tem permissão para excluir esta manutenção" });
+          }
+
           const delMaintenance = await deleteMaintenance(req.params.id);
           res.json(delMaintenance);
      } catch (error) {
@@ -231,12 +274,13 @@ app.delete("/maintenance/:id", authMiddleware, requireRole("admin"), async (req,
      }
 });
 
-app.get("/maintenance", async (req, res) => {
+app.get("/maintenance/mine", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
-          const lerMaintenance = await readMaintenance(req.body);
-          res.json(lerMaintenance);
+          const workshopId = await getMyWorkshopId(req.user.id);
+          const minhasManutencoes = await MMaintenance.find({ workshop: workshopId });
+          res.json(minhasManutencoes);
      } catch (error) {
-          res.json({ error: error.message });
+          res.status(400).json({ error: error.message });
      }
 });
 

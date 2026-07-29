@@ -17,6 +17,11 @@ const VeiculoSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    workshop: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Workshop",
+        required: true
+    },
     maintenances: [
         {
             type: mongoose.Schema.Types.ObjectId,
