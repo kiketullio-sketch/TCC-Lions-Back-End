@@ -38,7 +38,7 @@ import createAdmin from "./repository/admin.repository/adminCreate.repository.js
 import deleteAdmin from "./repository/admin.repository/adminDelete.reposirory.js";
 import updateAdmin from "./repository/admin.repository/adminUpdate.repository.js";
 import MAdmin from "./db/Admin.js";
-import MWorkshop from "./db/Workshop.js";
+
 
 const app = express();
 const DOOR = process.env.DOOR || 3000;
