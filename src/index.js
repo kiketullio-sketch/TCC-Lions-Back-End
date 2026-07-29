@@ -224,6 +224,7 @@ app.get("/maintenance", async (req, res) => {
 //! User
 app.post("/user", async (req, res) => {
      try {
+          console.log("Body recebido:", req.body);
           const { senha, email, CPF, ...rest } = req.body;
 
           if (!senha || !email || !CPF) {
