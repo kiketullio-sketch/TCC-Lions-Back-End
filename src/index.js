@@ -178,6 +178,12 @@ app.delete("/workshop/:id", authMiddleware, requireRole("admin"), async (req, re
 //! Veiculo
 app.post("/veiculo", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
+          const { owner } = req.body;
+
+          if (!owner) {
+               return res.status(400).json({ error: "É necessário informar o cliente dono do veículo" });
+          }
+
           const workshopId = await getMyWorkshopId(req.user.id);
           const newVeiculo = await createVeiculo({ ...req.body, workshop: workshopId });
           res.json(newVeiculo);
@@ -218,11 +224,17 @@ app.delete("/veiculo/:id", authMiddleware, requireRole("admin"), async (req, res
      }
 });
 
-app.get("/veiculo/mine", authMiddleware, requireRole("admin"), async (req, res) => {
+app.get("/veiculo/mine", authMiddleware, async (req, res) => {
      try {
-          const workshopId = await getMyWorkshopId(req.user.id);
-          const meusVeiculos = await MVeiculo.find({ workshop: workshopId });
-          res.json(meusVeiculos);
+          let filtro;
+          if (req.user.type === "admin") {
+               const workshopId = await getMyWorkshopId(req.user.id);
+               filtro = { workshop: workshopId };
+          } else {
+               filtro = { owner: req.user.id };
+          }
+          const veiculos = await MVeiculo.find(filtro);
+          res.json(veiculos);
      } catch (error) {
           res.status(400).json({ error: error.message });
      }
@@ -274,11 +286,21 @@ app.delete("/maintenance/:id", authMiddleware, requireRole("admin"), async (req,
      }
 });
 
-app.get("/maintenance/mine", authMiddleware, requireRole("admin"), async (req, res) => {
+app.get("/maintenance/mine", authMiddleware, async (req, res) => {
      try {
-          const workshopId = await getMyWorkshopId(req.user.id);
-          const minhasManutencoes = await MMaintenance.find({ workshop: workshopId });
-          res.json(minhasManutencoes);
+          let filtro;
+
+          if (req.user.type === "admin") {
+               const workshopId = await getMyWorkshopId(req.user.id);
+               filtro = { workshop: workshopId };
+          } else {
+               const meusVeiculos = await MVeiculo.find({ owner: req.user.id }).select("_id");
+               const idsVeiculos = meusVeiculos.map((v) => v._id);
+               filtro = { veiculo: { $in: idsVeiculos } };
+          }
+
+          const manutencoes = await MMaintenance.find(filtro);
+          res.json(manutencoes);
      } catch (error) {
           res.status(400).json({ error: error.message });
      }
