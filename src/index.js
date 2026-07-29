@@ -178,17 +178,17 @@ app.delete("/workshop/:id", authMiddleware, requireRole("admin"), async (req, re
 //! Veiculo
 app.post("/veiculo", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
-          const { owner } = req.body;
+          const ownerId = typeof req.body.owner === "object" ? req.body.owner._id ?? req.body.owner.owner ?? req.body.owner.id : req.body.owner;
 
-          if (!owner) {
+          if (!ownerId) {
                return res.status(400).json({ error: "É necessário informar o cliente dono do veículo" });
           }
 
           const workshopId = await getMyWorkshopId(req.user.id);
-          const newVeiculo = await createVeiculo({ ...req.body, workshop: workshopId });
+          const newVeiculo = await createVeiculo({ ...req.body, owner: ownerId, workshop: workshopId });
           res.json(newVeiculo);
      } catch (error) {
-          res.json({ error: error.message });
+          res.status(400).json({ error: error.message });
      }
 });
 
