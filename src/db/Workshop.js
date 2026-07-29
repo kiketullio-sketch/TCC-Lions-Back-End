@@ -12,6 +12,11 @@ const WorkshopSchema = new mongoose.Schema({
     specialties: {
         type: [String],
         required: true
+    },
+    admin: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Admin",
+        required: true
     }
         
 })

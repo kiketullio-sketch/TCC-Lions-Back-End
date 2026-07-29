@@ -35,6 +35,7 @@ import createAdmin from "./repository/admin.repository/adminCreate.repository.js
 import deleteAdmin from "./repository/admin.repository/adminDelete.reposirory.js";
 import updateAdmin from "./repository/admin.repository/adminUpdate.repository.js";
 import MAdmin from "./db/Admin.js";
+import MWorkshop from "./db/Workshop.js";
 
 const app = express();
 const DOOR = process.env.DOOR || 3000;
@@ -113,15 +114,34 @@ app.get("/me", authMiddleware, async (req, res) => {
 //! Workshop
 app.post("/workshop", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
-          const newWork = await createWorkshop(req.body);
+          const newWork = await createWorkshop({ ...req.body, admin: req.user.id });
           res.json(newWork);
      } catch (error) {
           res.status(400).json({ error: error.message });
      }
 });
 
+
+
+app.get("/workshop/mine", authMiddleware, requireRole("admin"), async (req, res) => {
+     try {
+          const myWork = await MWorkshop.findOne({ admin: req.user.id });
+          res.json(myWork);
+     } catch (error) {
+          res.json({ error: error.message });
+     }
+});
+
+
+
 app.put("/workshop/:id", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
+          const workshop = await MWorkshop.findById(req.params.id);
+          if (!workshop) return res.status(404).json({ error: "Oficina não encontrada" });
+
+          if (workshop.admin.toString() !== req.user.id) {
+               return res.status(403).json({ error: "Você não tem permissão para editar esta oficina" });
+          }
           const updateWork = await updateWorkshop(req.params.id, req.body, { new: true });
           res.json(updateWork);
      } catch (error) {
@@ -131,6 +151,12 @@ app.put("/workshop/:id", authMiddleware, requireRole("admin"), async (req, res) 
 
 app.delete("/workshop/:id", authMiddleware, requireRole("admin"), async (req, res) => {
      try {
+          const workshop = await MWorkshop.findById(req.params.id);
+          if (!workshop) return res.status(404).json({ error: "Oficina não encontrada" });
+
+          if (workshop.admin.toString() !== req.user.id) {
+               return res.status(403).json({ error: "Você não tem permissão para excluir esta oficina" });
+          }
           const deleteWork = await deleteWorkshop(req.params.id);
           res.json(deleteWork);
      } catch (error) {
@@ -138,14 +164,7 @@ app.delete("/workshop/:id", authMiddleware, requireRole("admin"), async (req, re
      }
 });
 
-app.get("/workshop", async (req, res) => {
-     try {
-          const listarWork = await listarWorkshop(req.body);
-          res.json(listarWork);
-     } catch (error) {
-          res.json({ error: error.message });
-     }
-});
+
 
 //! Veiculo
 app.post("/veiculo", authMiddleware, requireRole("admin"), async (req, res) => {
