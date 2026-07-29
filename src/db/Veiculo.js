@@ -14,11 +14,11 @@ const VeiculoSchema = new mongoose.Schema({
         required: true
     },
     owner: {
-        owner: {
+        
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true
-}
+
     },
     workshop: {
         type: mongoose.Schema.Types.ObjectId,
