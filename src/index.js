@@ -299,7 +299,10 @@ app.get("/maintenance/mine", authMiddleware, async (req, res) => {
                filtro = { veiculo: { $in: idsVeiculos } };
           }
 
-          const manutencoes = await MMaintenance.find(filtro);
+
+          const manutencoes = await MMaintenance.find(filtro)
+          .populate("workshop", "name")
+          .populate("veiculo", "plate model");
           res.json(manutencoes);
      } catch (error) {
           res.status(400).json({ error: error.message });
